@@ -523,16 +523,23 @@ func (c Client) lockBech32Prefix() (unlockFn func()) {
 	return mconf.Unlock
 }
 
-/*
-func (c Client) BroadcastTx(ctx context.Context, account cosmosaccount.Account, msgs ...sdktypes.Msg) (Response, error) {
-	txService, err := c.CreateTx(ctx, account, msgs...)
+func (c Client) BroadcastTx(ctx context.Context, account cosmosaccount.Account, seq int, msgs ...sdktypes.Msg) (Response, error) {
+	txService, err := c.CreateTx(ctx, account, seq, msgs...)
+	if err != nil {
+		return Response{}, err
+	}
+	rawTx, err := txService.SignTx(ctx)
 	if err != nil {
 		return Response{}, err
 	}
 
-	return txService.Broadcast(ctx)
+	resp, err := c.Context().BroadcastTxSync(rawTx)
+	if err != nil {
+		return Response{}, err
+	}
+
+	return Response{c.Context().Codec, resp}, nil
 }
-*/
 
 func (c Client) CreateTx(goCtx context.Context, account cosmosaccount.Account, seq int, msgs ...sdktypes.Msg) (TxService, error) {
 	//defer c.lockBech32Prefix()()
