@@ -523,7 +523,7 @@ func (c Client) lockBech32Prefix() (unlockFn func()) {
 	return mconf.Unlock
 }
 
-func (c Client) BroadcastTx(ctx context.Context, account cosmosaccount.Account, seq int, msgs ...sdktypes.Msg) (Response, error) {
+func (c Client) BroadcastTx(ctx context.Context, account cosmosaccount.Account, seq uint64, msgs ...sdktypes.Msg) (Response, error) {
 	txService, err := c.CreateTx(ctx, account, seq, msgs...)
 	if err != nil {
 		return Response{}, err
@@ -541,7 +541,7 @@ func (c Client) BroadcastTx(ctx context.Context, account cosmosaccount.Account, 
 	return Response{c.Context().Codec, resp}, nil
 }
 
-func (c Client) CreateTx(goCtx context.Context, account cosmosaccount.Account, seq int, msgs ...sdktypes.Msg) (TxService, error) {
+func (c Client) CreateTx(goCtx context.Context, account cosmosaccount.Account, seq uint64, msgs ...sdktypes.Msg) (TxService, error) {
 	//defer c.lockBech32Prefix()()
 
 	/*
@@ -736,30 +736,30 @@ func handleBroadcastResult(resp *sdktypes.TxResponse, err error) error {
 	return nil
 }
 
-func (c *Client) prepareFactory(clientCtx client.Context, seq int) (tx.Factory, error) {
+func (c *Client) prepareFactory(clientCtx client.Context, seq uint64) (tx.Factory, error) {
 	var txf = c.TxFactory
 
-	/*
-		initNum, initSeq := txf.AccountNumber(), txf.Sequence()
-		if initNum == 0 || initSeq == 0 {
-			num, seq, err := c.accountRetriever.GetAccountNumberSequence(clientCtx, from)
-			fmt.Println("num", num, "seq", seq)
-			if err != nil {
-				return txf, errors.WithStack(err)
-			}
+	if seq != 0 {
+		txf = txf.WithSequence(seq)
+	}
 
-			if initNum == 0 {
-				txf = txf.WithAccountNumber(num)
-			}
-
-			if initSeq == 0 {
-				txf = txf.WithSequence(seq)
-			}
+	from := clientCtx.GetFromAddress()
+	initNum, initSeq := txf.AccountNumber(), txf.Sequence()
+	if initNum == 0 || initSeq == 0 {
+		num, seq, err := c.accountRetriever.GetAccountNumberSequence(clientCtx, from)
+		fmt.Println("num", num, "seq", seq)
+		if err != nil {
+			return txf, errors.WithStack(err)
 		}
-	*/
-	num, _ := strconv.ParseInt(os.Getenv("tps_NUM"), 10, 64)
-	txf = txf.WithAccountNumber(uint64(num))
-	txf = txf.WithSequence(uint64(seq))
+
+		if initNum == 0 {
+			txf = txf.WithAccountNumber(num)
+		}
+
+		if initSeq == 0 {
+			txf = txf.WithSequence(seq)
+		}
+	}
 
 	return txf, nil
 }
