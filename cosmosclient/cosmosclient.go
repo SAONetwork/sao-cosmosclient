@@ -570,7 +570,22 @@ func (c Client) CreateTx(goCtx context.Context, account cosmosaccount.Account, s
 		return TxService{}, err
 	}
 
-	txf = txf.WithGas(79985)
+	var gas uint64
+	if c.gas != "" && c.gas != "auto" {
+		gas, err = strconv.ParseUint(c.gas, 10, 64)
+		if err != nil {
+			return TxService{}, errors.WithStack(err)
+		}
+	} else {
+		_, gas, err = c.gasometer.CalculateGas(ctx, txf, msgs...)
+		if err != nil {
+			return TxService{}, errors.WithStack(err)
+		}
+		// the simulated gas can vary from the actual gas needed for a real transaction
+		// we add an additional amount to ensure sufficient gas is provided
+		gas += 20000
+	}
+	txf = txf.WithGas(gas)
 	txf = txf.WithFees(c.fees)
 
 	if c.gasPrices != "" {
